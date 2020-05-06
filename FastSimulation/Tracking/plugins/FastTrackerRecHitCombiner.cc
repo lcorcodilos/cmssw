@@ -1,6 +1,10 @@
 // system include files
 #include <memory>
 
+// math for matching extra RecHits
+#include <cmath>
+#include <typeinfo>
+
 // frame work stuff
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/stream/EDProducer.h"
@@ -76,14 +80,22 @@ void
 	if(!recHit.isNull())
 	    currentCombination.push_back(recHit);
 
-        //fake addition
+        // Delta R determined addition
         for(unsigned int fksimHitCounter = simHitCounter; fksimHitCounter < simHits->size(); fksimHitCounter++){
             const PSimHit & fksimHit = (*simHits)[fksimHitCounter];
             if(fksimHit.trackId() != simHit.trackId()){
                 const FastTrackerRecHitRef & fkrecHit = (*simHit2RecHitMap)[fksimHitCounter];
-                if(!fkrecHit.isNull()){
+
+                const GlobalPoint fkrecPos = fkrecHit->globalPosition();
+                
+                const float simEta = log(tan(simHit.thetaAtEntry().value()/2.0));
+                const float deltaFkrecSim = sqrt(pow(simEta - fkrecPos.eta(),2)+pow(simHit.phiAtEntry().value() - fkrecPos.phi(),2));
+                //std::cout << "SimHit theta = " << simHit.thetaAtEntry().value() << std::endl;
+                //std::cout << "SimHit eta = " << simEta << std::endl;
+                //std::cout << "DeltaR = " << deltaFkrecSim << std::endl; 
+                if(!fkrecHit.isNull() && deltaFkrecSim < 1.0){
                     currentCombination.push_back(fkrecHit);
-                    break;
+                    //break;
                 }
             }
         }
