@@ -68,7 +68,12 @@ void
  
     // output
     std::unique_ptr<FastTrackerRecHitCombinationCollection> output(new FastTrackerRecHitCombinationCollection);
-    
+   
+    // declare ahead
+    GlobalPoint fkrecPos;
+    float simEta;
+    float deltaFkrecSim;
+ 
     FastTrackerRecHitCombination currentCombination;
     for(unsigned int simHitCounter = 0;simHitCounter < simHits->size();simHitCounter++){
 	
@@ -77,25 +82,28 @@ void
 	const FastTrackerRecHitRef & recHit = (*simHit2RecHitMap)[simHitCounter];
 
 	// add recHit to latest combination
-	if(!recHit.isNull())
-	    currentCombination.push_back(recHit);
+	if(!recHit.isNull()){
+	    currentCombination.push_back(recHit);}
 
         // Delta R determined addition
         for(unsigned int fksimHitCounter = simHitCounter; fksimHitCounter < simHits->size(); fksimHitCounter++){
             const PSimHit & fksimHit = (*simHits)[fksimHitCounter];
             if(fksimHit.trackId() != simHit.trackId()){
                 const FastTrackerRecHitRef & fkrecHit = (*simHit2RecHitMap)[fksimHitCounter];
+ 
+                if(!fkrecHit.isNull()) {
 
-                const GlobalPoint fkrecPos = fkrecHit->globalPosition();
+                    fkrecPos = fkrecHit->globalPosition();
                 
-                const float simEta = log(tan(simHit.thetaAtEntry().value()/2.0));
-                const float deltaFkrecSim = sqrt(pow(simEta - fkrecPos.eta(),2)+pow(simHit.phiAtEntry().value() - fkrecPos.phi(),2));
-                //std::cout << "SimHit theta = " << simHit.thetaAtEntry().value() << std::endl;
-                //std::cout << "SimHit eta = " << simEta << std::endl;
-                //std::cout << "DeltaR = " << deltaFkrecSim << std::endl; 
-                if(!fkrecHit.isNull() && deltaFkrecSim < 1.0){
-                    currentCombination.push_back(fkrecHit);
-                    //break;
+                    simEta = -log(tan(simHit.thetaAtEntry().value()/2.0));
+                    deltaFkrecSim = sqrt(pow(simEta - fkrecPos.eta(),2)+pow(simHit.phiAtEntry().value() - fkrecPos.phi(),2));
+                    //std::cout << "SimHit theta = " << simHit.thetaAtEntry().value() << std::endl;
+                    //std::cout << "SimHit eta = " << simEta << std::endl;
+                    //std::cout << "DeltaR = " << deltaFkrecSim << std::endl; 
+                    if(deltaFkrecSim < 1.0){
+                        currentCombination.push_back(fkrecHit);
+                        break;
+                    }
                 }
             }
         }
