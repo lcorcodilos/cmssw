@@ -97,9 +97,6 @@ void
                 
                     simEta = -log(tan(simHit.thetaAtEntry().value()/2.0));
                     deltaFkrecSim = sqrt(pow(simEta - fkrecPos.eta(),2)+pow(simHit.phiAtEntry().value() - fkrecPos.phi(),2));
-                    //std::cout << "SimHit theta = " << simHit.thetaAtEntry().value() << std::endl;
-                    //std::cout << "SimHit eta = " << simEta << std::endl;
-                    //std::cout << "DeltaR = " << deltaFkrecSim << std::endl; 
                     if(deltaFkrecSim < 1.0){
                         currentCombination.push_back(fkrecHit);
                         break;
