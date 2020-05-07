@@ -70,9 +70,9 @@ void
     std::unique_ptr<FastTrackerRecHitCombinationCollection> output(new FastTrackerRecHitCombinationCollection);
    
     // declare ahead
-    GlobalPoint fkrecPos;
-    float simEta;
-    float deltaFkrecSim;
+    LocalPoint fkrecPos;
+    LocalPoint simPos;
+    float distance;
  
     FastTrackerRecHitCombination currentCombination;
     for(unsigned int simHitCounter = 0;simHitCounter < simHits->size();simHitCounter++){
@@ -80,6 +80,8 @@ void
 	// get simHit and recHit
 	const PSimHit & simHit = (*simHits)[simHitCounter];
 	const FastTrackerRecHitRef & recHit = (*simHit2RecHitMap)[simHitCounter];
+
+        simPos = simHit.localPosition(); 
 
 	// add recHit to latest combination
 	if(!recHit.isNull()){
@@ -93,16 +95,12 @@ void
  
                 if(!fkrecHit.isNull()) {
 
-                    fkrecPos = fkrecHit->globalPosition();
-                
-                    simEta = -log(tan(simHit.thetaAtEntry().value()/2.0));
-                    deltaFkrecSim = sqrt(pow(simEta - fkrecPos.eta(),2)+pow(simHit.phiAtEntry().value() - fkrecPos.phi(),2));
-                    //std::cout << "SimHit theta = " << simHit.thetaAtEntry().value() << std::endl;
-                    //std::cout << "SimHit eta = " << simEta << std::endl;
-                    //std::cout << "DeltaR = " << deltaFkrecSim << std::endl; 
-                    if(deltaFkrecSim < 1.0){
-                        currentCombination.push_back(fkrecHit);
-                        break;
+                    fkrecPos = fkrecHit->localPosition();
+                    distance = sqrt( pow(fkrecPos.x()-simPos.x(),2) + pow(fkrecPos.y()-simPos.y(),2) ); 
+
+                    if(distance < 0.001){
+                        std::cout << "Adding close recHit..." << distance << std::endl;
+                        currentCombination.push_back(fkrecHit); 
                     }
                 }
             }
