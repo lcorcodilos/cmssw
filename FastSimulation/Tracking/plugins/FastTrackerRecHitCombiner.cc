@@ -58,6 +58,9 @@ FastTrackerRecHitCombiner::FastTrackerRecHitCombiner(const edm::ParameterSet& iC
 void
     FastTrackerRecHitCombiner::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
+    // services
+    edm::ESHandle<TrackerGeometry> geometry;
+    iSetup.get<TrackerDigiGeometryRecord> ().get (geometry);
 
     // input
     edm::Handle<edm::PSimHitContainer> simHits;
@@ -70,9 +73,8 @@ void
     std::unique_ptr<FastTrackerRecHitCombinationCollection> output(new FastTrackerRecHitCombinationCollection);
    
     // declare ahead
-    LocalPoint fkrecPos;
-    LocalPoint simPos;
-    float distance;
+    GlobalPoint fkrecPos;
+    float deltaFkrecSim;
  
     FastTrackerRecHitCombination currentCombination;
     for(unsigned int simHitCounter = 0;simHitCounter < simHits->size();simHitCounter++){
@@ -81,30 +83,36 @@ void
 	const PSimHit & simHit = (*simHits)[simHitCounter];
 	const FastTrackerRecHitRef & recHit = (*simHit2RecHitMap)[simHitCounter];
 
-        simPos = simHit.localPosition(); 
-
 	// add recHit to latest combination
 	if(!recHit.isNull()){
 	    currentCombination.push_back(recHit);}
 
         // Delta R determined addition
         for(unsigned int fksimHitCounter = simHitCounter; fksimHitCounter < simHits->size(); fksimHitCounter++){
+            
             const PSimHit & fksimHit = (*simHits)[fksimHitCounter];
             if(fksimHit.trackId() != simHit.trackId()){
                 const FastTrackerRecHitRef & fkrecHit = (*simHit2RecHitMap)[fksimHitCounter];
  
                 if(!fkrecHit.isNull()) {
 
-                    fkrecPos = fkrecHit->localPosition();
-                    distance = sqrt( pow(fkrecPos.x()-simPos.x(),2) + pow(fkrecPos.y()-simPos.y(),2) ); 
+                    const LocalPoint& fksimLocalPoint = fksimHit.localPosition();
+                    const DetId& fksimDetId = fksimHit.detUnitId();
+                    const GeomDet* fksimGeomDet = geometry->idToDet(fksimDetId);
+                    const GlobalPoint& fksimPos = fksimGeomDet->toGlobal(fksimLocalPoint);
 
-                    if(distance < 0.001){
-                        std::cout << "Adding close recHit..." << distance << std::endl;
-                        currentCombination.push_back(fkrecHit); 
+                    fkrecPos = fkrecHit->globalPosition();
+                
+                    deltaFkrecSim = sqrt(pow(fksimPos.x()-fkrecPos.x(),2)+pow(fksimPos.y()-fkrecPos.y(),2));
+                    if(deltaFkrecSim < 0.001){
+                        currentCombination.push_back(fkrecHit);
+                        //break;
                     }
                 }
             }
         }
+
+        //std::cout << "N fakes added: " << currentCombination.size() << std::endl;
 
 	// if simTrackId is about to change, add combination
 	if(simHits->size()-simHitCounter == 1 || simHit.trackId() != (*simHits)[simHitCounter+1].trackId() ){
