@@ -73,9 +73,9 @@ void
     std::unique_ptr<FastTrackerRecHitCombinationCollection> output(new FastTrackerRecHitCombinationCollection);
    
     // declare ahead
-    GlobalPoint fkrecPos;
     float deltaFkrecSim;
- 
+    //int added;
+
     FastTrackerRecHitCombination currentCombination;
     for(unsigned int simHitCounter = 0;simHitCounter < simHits->size();simHitCounter++){
 	
@@ -83,10 +83,17 @@ void
 	const PSimHit & simHit = (*simHits)[simHitCounter];
 	const FastTrackerRecHitRef & recHit = (*simHit2RecHitMap)[simHitCounter];
 
+        // get simHit pos
+        const LocalPoint& simLocalPoint = simHit.localPosition();
+        const DetId& simDetId = simHit.detUnitId();
+        const GeomDet* simGeomDet = geometry->idToDet(simDetId);
+        const GlobalPoint& simPos = simGeomDet->toGlobal(simLocalPoint);
+
 	// add recHit to latest combination
 	if(!recHit.isNull()){
 	    currentCombination.push_back(recHit);}
 
+        //added = 0;
         // Delta R determined addition
         for(unsigned int fksimHitCounter = simHitCounter; fksimHitCounter < simHits->size(); fksimHitCounter++){
             
@@ -94,19 +101,16 @@ void
             if(fksimHit.trackId() != simHit.trackId()){
                 const FastTrackerRecHitRef & fkrecHit = (*simHit2RecHitMap)[fksimHitCounter];
  
-                if(!fkrecHit.isNull()) {
-
-                    const LocalPoint& fksimLocalPoint = fksimHit.localPosition();
-                    const DetId& fksimDetId = fksimHit.detUnitId();
-                    const GeomDet* fksimGeomDet = geometry->idToDet(fksimDetId);
-                    const GlobalPoint& fksimPos = fksimGeomDet->toGlobal(fksimLocalPoint);
-
-                    fkrecPos = fkrecHit->globalPosition();
+                if(!fkrecHit.isNull() && fkrecHit != recHit) {
+                    const GlobalPoint& fkrecPos = fkrecHit->globalPosition();
                 
-                    deltaFkrecSim = sqrt(pow(fksimPos.x()-fkrecPos.x(),2)+pow(fksimPos.y()-fkrecPos.y(),2));
-                    if(deltaFkrecSim < 0.001){
+                    deltaFkrecSim = sqrt(pow(simPos.x()-fkrecPos.x(),2)+pow(simPos.y()-fkrecPos.y(),2)+pow(simPos.z()-fkrecPos.z(),2));
+                    //std::cout << "DISTANCE: " << deltaFkrecSim << std::endl;
+                    if(deltaFkrecSim < 0.1){
+                        //std::cout << "DISTANCE: " << deltaFkrecSim << std::endl;
                         currentCombination.push_back(fkrecHit);
-                        //break;
+                        //added++;
+                        //if (added > 3) {break;}
                     }
                 }
             }
