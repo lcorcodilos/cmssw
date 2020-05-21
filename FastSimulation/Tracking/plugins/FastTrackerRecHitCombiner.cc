@@ -106,7 +106,7 @@ void
                 
                     deltaFkrecSim = sqrt(pow(simPos.x()-fkrecPos.x(),2)+pow(simPos.y()-fkrecPos.y(),2)+pow(simPos.z()-fkrecPos.z(),2));
                     //std::cout << "DISTANCE: " << deltaFkrecSim << std::endl;
-                    if(deltaFkrecSim < 0.1){
+                    if(deltaFkrecSim < 0.5){
                         //std::cout << "DISTANCE: " << deltaFkrecSim << std::endl;
                         currentCombination.push_back(fkrecHit);
                         //added++;
