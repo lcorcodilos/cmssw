@@ -74,14 +74,16 @@ void
    
     // declare ahead
     float deltaFkrecSim;
+    float deltaFkrecSimCutoff;
+    const float coneSlope = 0.01;
     //int added;
 
     FastTrackerRecHitCombination currentCombination;
     for(unsigned int simHitCounter = 0;simHitCounter < simHits->size();simHitCounter++){
-	
-	// get simHit and recHit
-	const PSimHit & simHit = (*simHits)[simHitCounter];
-	const FastTrackerRecHitRef & recHit = (*simHit2RecHitMap)[simHitCounter];
+    
+        // get simHit and recHit
+        const PSimHit & simHit = (*simHits)[simHitCounter];
+        const FastTrackerRecHitRef & recHit = (*simHit2RecHitMap)[simHitCounter];
 
         // get simHit pos
         const LocalPoint& simLocalPoint = simHit.localPosition();
@@ -89,44 +91,46 @@ void
         const GeomDet* simGeomDet = geometry->idToDet(simDetId);
         const GlobalPoint& simPos = simGeomDet->toGlobal(simLocalPoint);
 
-	// add recHit to latest combination
-	if(!recHit.isNull()){
-	    currentCombination.push_back(recHit);}
+        // add recHit to latest combination
+        if(!recHit.isNull()){
+            currentCombination.push_back(recHit);}
 
-        //added = 0;
-        // Delta R determined addition
-        for(unsigned int fksimHitCounter = simHitCounter; fksimHitCounter < simHits->size(); fksimHitCounter++){
-            
-            const PSimHit & fksimHit = (*simHits)[fksimHitCounter];
-            if(fksimHit.trackId() != simHit.trackId()){
-                const FastTrackerRecHitRef & fkrecHit = (*simHit2RecHitMap)[fksimHitCounter];
- 
-                if(!fkrecHit.isNull() && fkrecHit != recHit) {
-                    const GlobalPoint& fkrecPos = fkrecHit->globalPosition();
+            //added = 0;
+            // Delta R determined addition
+            for(unsigned int fksimHitCounter = simHitCounter; fksimHitCounter < simHits->size(); fksimHitCounter++){
                 
-                    deltaFkrecSim = sqrt(pow(simPos.x()-fkrecPos.x(),2)+pow(simPos.y()-fkrecPos.y(),2)+pow(simPos.z()-fkrecPos.z(),2));
-                    //std::cout << "DISTANCE: " << deltaFkrecSim << std::endl;
-                    if(deltaFkrecSim < 0.5){
+                const PSimHit & fksimHit = (*simHits)[fksimHitCounter];
+                if(fksimHit.trackId() != simHit.trackId()){
+                    const FastTrackerRecHitRef & fkrecHit = (*simHit2RecHitMap)[fksimHitCounter];
+    
+                    if(!fkrecHit.isNull() && fkrecHit != recHit) {
+                        const GlobalPoint& fkrecPos = fkrecHit->globalPosition();
+                    
+                        deltaFkrecSim = sqrt(pow(simPos.x()-fkrecPos.x(),2)+pow(simPos.y()-fkrecPos.y(),2)+pow(simPos.z()-fkrecPos.z(),2));
+                        deltaFkrecSimCutoff = coneSlope*simPos.mag();
+
                         //std::cout << "DISTANCE: " << deltaFkrecSim << std::endl;
-                        currentCombination.push_back(fkrecHit);
-                        //added++;
-                        //if (added > 3) {break;}
+                        if (deltaFkrecSim < deltaFkrecSimCutoff){
+                            //std::cout << "DISTANCE: " << deltaFkrecSim << std::endl;
+                            currentCombination.push_back(fkrecHit);
+                            //added++;
+                            //if (added > 3) {break;}
+                        }
                     }
                 }
-            }
         }
 
         //std::cout << "N fakes added: " << currentCombination.size() << std::endl;
 
-	// if simTrackId is about to change, add combination
-	if(simHits->size()-simHitCounter == 1 || simHit.trackId() != (*simHits)[simHitCounter+1].trackId() ){
-	    // combination must have sufficient hits
-	    if(currentCombination.size() >= minNHits){
-		currentCombination.shrink_to_fit();
-		output->push_back(currentCombination);
-	    }
-	    currentCombination.clear();
-	}
+        // if simTrackId is about to change, add combination
+        if(simHits->size()-simHitCounter == 1 || simHit.trackId() != (*simHits)[simHitCounter+1].trackId() ){
+            // combination must have sufficient hits
+            if(currentCombination.size() >= minNHits){
+            currentCombination.shrink_to_fit();
+            output->push_back(currentCombination);
+            }
+            currentCombination.clear();
+        }
     }
 
     // put output in event
